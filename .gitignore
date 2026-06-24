@@ -1,0 +1,28 @@
+# Environnement
+node_modules/
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+dist/
+build/
+
+# Données locales
+*.xlsx
+*.txt

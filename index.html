@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Examen Optométrique</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const OptometrieApp = () => {
+            const [formData, setFormData] = useState({
+                dateExamen: new Date().toISOString().split('T')[0],
+                nomPatient: '',
+                prenomPatient: '',
+                dateNaissance: '',
+                originEDV: 'EDV client',
+                initialesOpticien: '',
+                butVisite: '',
+                plaintesVisuelles: '',
+                pathologie: '',
+                chirurgie: '',
+                choc: '',
+                orthoptie: '',
+                lentilles: '',
+                traitementsOcul: '',
+                sante: '',
+                diabete: false,
+                hta: false,
+                sep: false,
+                autres: '',
+                avBruteVLOD: '',
+                avBruteVPOD: '',
+                avBruteVLOG: '',
+                avBruteVPOG: '',
+                avBruteVLBINO: '',
+                avBruteVPBINO: '',
+                dateAnciennePresc: '',
+                ophtalmologiste: '',
+                correctionOD: '',
+                avCorrigeeVLOD: '',
+                avCorrigeeVPOD: '',
+                correctionOG: '',
+                avCorrigeeVLOG: '',
+                avCorrigeeVPOG: '',
+                avCorrigeeVLBINO: '',
+                avCorrigeeVPBINO: '',
+                refractionOD: '',
+                avFinaleVLOD: '',
+                avFinaleVPOD: '',
+                refractionOG: '',
+                avFinaleVLOG: '',
+                avFinaleVPOG: '',
+                avFinaleVLBINO: '',
+                avFinaleVPBINO: '',
+                observations: '',
+                conseils: '',
+                modalitePort: '',
+                issuEDV: '',
+                nomPrescripteur: '',
+                nomStructure: '',
+            });
+
+            const [savedExams, setSavedExams] = useState([]);
+            const [activeTab, setActiveTab] = useState(0);
+            const [showReport, setShowReport] = useState(false);
+
+            // Charger les données sauvegardées
+            useEffect(() => {
+                const saved = localStorage.getItem('optometrieExamens');
+                if (saved) {
+                    setSavedExams(JSON.parse(saved));
+                }
+            }, []);
+
+            // Sauvegarder dans localStorage
+            const saveToLocalStorage = (exams) => {
+                localStorage.setItem('optometrieExamens', JSON.stringify(exams));
+            };
+
+            const handleInputChange = (e) => {
+                const { name, value, type, checked } = e.target;
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: type === 'checkbox' ? checked : value
+                }));
+            };
+
+            const saveExam = () => {
+                const examId = Date.now();
+                const newExam = { ...formData, id: examId };
+                const updated = [...savedExams, newExam];
+                setSavedExams(updated);
+                saveToLocalStorage(updated);
+                alert('✅ Examen sauvegardé !');
+            };
+
+            const deleteExam = (id) => {
+                const updated = savedExams.filter(e => e.id !== id);
+                setSavedExams(updated);
+                saveToLocalStorage(updated);
+            };
+
+            const newExam = () => {
+                if (formData.nomPatient || formData.prenomPatient) {
+                    if (!window.confirm('Des données en cours. Créer un nouvel examen ?')) return;
+                }
+                setFormData({
+                    dateExamen: new Date().toISOString().split('T')[0],
+                    nomPatient: '',
+                    prenomPatient: '',
+                    dateNaissance: '',
+                    originEDV: 'EDV client',
+                    initialesOpticien: '',
+                    butVisite: '',
+                    plaintesVisuelles: '',
+                    pathologie: '',
+                    chirurgie: '',
+                    choc: '',
+                    orthoptie: '',
+                    lentilles: '',
+                    traitementsOcul: '',
+                    sante: '',
+                    diabete: false,
+                    hta: false,
+                    sep: false,
+                    autres: '',
+                    avBruteVLOD: '',
+                    avBruteVPOD: '',
+                    avBruteVLOG: '',
+                    avBruteVPOG: '',
+                    avBruteVLBINO: '',
+                    avBruteVPBINO: '',
+                    dateAnciennePresc: '',
+                    ophtalmologiste: '',
+                    correctionOD: '',
+                    avCorrigeeVLOD: '',
+                    avCorrigeeVPOD: '',
+                    correctionOG: '',
+                    avCorrigeeVLOG: '',
+                    avCorrigeeVPOG: '',
+                    avCorrigeeVLBINO: '',
+                    avCorrigeeVPBINO: '',
+                    refractionOD: '',
+                    avFinaleVLOD: '',
+                    avFinaleVPOD: '',
+                    refractionOG: '',
+                    avFinaleVLOG: '',
+                    avFinaleVPOG: '',
+                    avFinaleVLBINO: '',
+                    avFinaleVPBINO: '',
+                    observations: '',
+                    conseils: '',
+                    modalitePort: '',
+                    issuEDV: '',
+                    nomPrescripteur: '',
+                    nomStructure: '',
+                });
+                setActiveTab(0);
+            };
+
+            const exportToExcel = () => {
+                const data = [
+                    ['EXAMEN OPTOMÉTRIQUE'],
+                    [],
+                    ['INFORMATIONS PATIENT'],
+                    ['Date examen:', formData.dateExamen],
+                    ['Nom:', formData.nomPatient],
+                    ['Prénom:', formData.prenomPatient],
+                    ['Date de naissance:', formData.dateNaissance],
+                    ['Origine EDV:', formData.originEDV],
+                    ['Initiales opticien:', formData.initialesOpticien],
+                    [],
+                    ['ANAMNÈSE'],
+                    ['But de la visite:', formData.butVisite],
+                    ['Plaintes visuelles:', formData.plaintesVisuelles],
+                    ['Pathologie:', formData.pathologie],
+                    ['Chirurgie:', formData.chirurgie],
+                    ['Choc/trauma:', formData.choc],
+                    ['Orthoptie:', formData.orthoptie],
+                    ['Lentilles:', formData.lentilles],
+                    ['Traitements oculaires:', formData.traitementsOcul],
+                    ['Santé générale:', formData.sante],
+                    ['Diabète:', formData.diabete ? 'Oui' : 'Non'],
+                    ['HTA:', formData.hta ? 'Oui' : 'Non'],
+                    ['SEP:', formData.sep ? 'Oui' : 'Non'],
+                    ['Autres:', formData.autres],
+                    [],
+                    ['ACUITÉ VISUELLE BRUTE'],
+                    ['', 'VL', 'VP'],
+                    ['OD', formData.avBruteVLOD, formData.avBruteVPOD],
+                    ['OG', formData.avBruteVLOG, formData.avBruteVPOG],
+                    ['BINO', formData.avBruteVLBINO, formData.avBruteVPBINO],
+                    [],
+                    ['ANCIENNES CORRECTIONS'],
+                    ['Date dernière prescription:', formData.dateAnciennePresc],
+                    ['Ophtalmologiste:', formData.ophtalmologiste],
+                    [],
+                    ['ACUITÉ VISUELLE CORRIGÉE'],
+                    ['OD:', formData.correctionOD, 'AV VL:', formData.avCorrigeeVLOD, 'AV VP:', formData.avCorrigeeVPOD],
+                    ['OG:', formData.correctionOG, 'AV VL:', formData.avCorrigeeVLOG, 'AV VP:', formData.avCorrigeeVPOG],
+                    ['', '', 'AV VL BINO:', formData.avCorrigeeVLBINO, 'AV VP BINO:', formData.avCorrigeeVPBINO],
+                    [],
+                    ['RÉFRACTION FINALE'],
+                    ['OD:', formData.refractionOD, 'AV VL:', formData.avFinaleVLOD, 'AV VP:', formData.avFinaleVPOD],
+                    ['OG:', formData.refractionOG, 'AV VL:', formData.avFinaleVLOG, 'AV VP:', formData.avFinaleVPOG],
+                    ['', '', 'AV VL BINO:', formData.avFinaleVLBINO, 'AV VP BINO:', formData.avFinaleVPBINO],
+                    [],
+                    ['OBSERVATIONS, CONSEILS ET MODALITÉ DE PORT'],
+                    ['Observations:', formData.observations],
+                    ['Conseils verres:', formData.conseils],
+                    ['Modalité de port:', formData.modalitePort],
+                    ['Issu de l\'EDV:', formData.issuEDV],
+                    [],
+                    ['CABINET'],
+                    ['Prescripteur:', formData.nomPrescripteur],
+                    ['Structure:', formData.nomStructure],
+                ];
+
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Examen');
+                
+                const filename = `Examen_${formData.nomPatient}_${formData.prenomPatient}_${formData.dateExamen}.xlsx`;
+                XLSX.writeFile(wb, filename);
+            };
+
+            const generateReport = () => {
+                const rapport = `
+═══════════════════════════════════════════════════════════════
+                    COMPTE RENDU D'EXAMEN OPTOMÉTRIQUE
+═══════════════════════════════════════════════════════════════
+
+CABINET: ${formData.nomStructure}
+Prescripteur: ${formData.nomPrescripteur}
+
+───────────────────────────────────────────────────────────────
+INFORMATIONS PATIENT
+───────────────────────────────────────────────────────────────
+Patient: ${formData.prenomPatient} ${formData.nomPatient}
+Date de naissance: ${formData.dateNaissance}
+Date d'examen: ${formData.dateExamen}
+Origine de l'EDV: ${formData.originEDV}
+Opticien: ${formData.initialesOpticien}
+
+───────────────────────────────────────────────────────────────
+ANAMNÈSE
+───────────────────────────────────────────────────────────────
+But de la visite:
+${formData.butVisite}
+
+Plaintes visuelles:
+${formData.plaintesVisuelles}
+
+Santé oculaire:
+- Pathologie: ${formData.pathologie || 'Aucune'}
+- Chirurgie: ${formData.chirurgie || 'Aucune'}
+- Choc/Trauma: ${formData.choc || 'Aucun'}
+- Orthoptie: ${formData.orthoptie || 'Non'}
+- Lentilles: ${formData.lentilles || 'Non'}
+- Traitements oculaires: ${formData.traitementsOcul || 'Aucun'}
+
+Santé générale:
+${formData.sante}
+- Diabète: ${formData.diabete ? 'Oui' : 'Non'}
+- HTA: ${formData.hta ? 'Oui' : 'Non'}
+- SEP: ${formData.sep ? 'Oui' : 'Non'}
+- Autres: ${formData.autres || 'Aucun'}
+
+───────────────────────────────────────────────────────────────
+ACUITÉ VISUELLE
+───────────────────────────────────────────────────────────────
+BRUTE:
+  OD VL: ${formData.avBruteVLOD}  |  VP: ${formData.avBruteVPOD}
+  OG VL: ${formData.avBruteVLOG}  |  VP: ${formData.avBruteVPOG}
+  BINO VL: ${formData.avBruteVLBINO}  |  VP: ${formData.avBruteVPBINO}
+
+CORRIGÉE:
+  OD: ${formData.correctionOD}
+      VL: ${formData.avCorrigeeVLOD}  |  VP: ${formData.avCorrigeeVPOD}
+  OG: ${formData.correctionOG}
+      VL: ${formData.avCorrigeeVLOG}  |  VP: ${formData.avCorrigeeVPOG}
+  BINO: VL: ${formData.avCorrigeeVLBINO}  |  VP: ${formData.avCorrigeeVPBINO}
+
+RÉFRACTION FINALE:
+  OD: ${formData.refractionOD}
+      VL: ${formData.avFinaleVLOD}  |  VP: ${formData.avFinaleVPOD}
+  OG: ${formData.refractionOG}
+      VL: ${formData.avFinaleVLOG}  |  VP: ${formData.avFinaleVPOG}
+  BINO: VL: ${formData.avFinaleVLBINO}  |  VP: ${formData.avFinaleVPBINO}
+
+───────────────────────────────────────────────────────────────
+ANCIENNES CORRECTIONS
+───────────────────────────────────────────────────────────────
+Date dernière prescription: ${formData.dateAnciennePresc}
+Ophtalmologiste: ${formData.ophtalmologiste}
+
+───────────────────────────────────────────────────────────────
+OBSERVATIONS & RECOMMANDATIONS
+───────────────────────────────────────────────────────────────
+Observations:
+${formData.observations}
+
+Conseils verres:
+${formData.conseils}
+
+Modalité de port:
+${formData.modalitePort}
+
+Issu de l'EDV:
+${formData.issuEDV}
+
+═══════════════════════════════════════════════════════════════
+Document généré le ${new Date().toLocaleDateString('fr-FR')}
+═══════════════════════════════════════════════════════════════
+                `;
+                return rapport;
+            };
+
+            const downloadReport = () => {
+                const rapport = generateReport();
+                const element = document.createElement('a');
+                const file = new Blob([rapport], { type: 'text/plain;charset=utf-8' });
+                element.href = URL.createObjectURL(file);
+                element.download = `Rapport_${formData.nomPatient}_${formData.prenomPatient}_${formData.dateExamen}.txt`;
+                document.body.appendChild(element);
+                element.click();
+                document.body.removeChild(element);
+            };
+
+            const tabs = [
+                { label: '📋 Infos Patient', content: 0 },
+                { label: '🏥 Anamnèse', content: 1 },
+                { label: '👁️ AV Brute', content: 2 },
+                { label: '📋 Anciennes Corrections', content: 3 },
+                { label: '✅ AV Corrigée', content: 4 },
+                { label: '🔍 Réfraction Finale', content: 5 },
+                { label: '📝 Observations', content: 6 },
+            ];
+
+            const InputField = ({ label, name, type = 'text', value, placeholder = '' }) => (
+                <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px', fontSize: '14px', color: '#2c3e50' }}>
+                        {label}
+                    </label>
+                    {type === 'textarea' ? (
+                        <textarea
+                            name={name}
+                            value={value}
+                            onChange={handleInputChange}
+                            placeholder={placeholder}
+                            style={{
+                                width: '100%',
+                                padding: '8px',
+                                border: '1px solid #bdc3c7',
+                                borderRadius: '4px',
+                                fontFamily: 'Arial, sans-serif',
+                                fontSize: '14px',
+                                minHeight: '80px',
+                                fontFamily: 'inherit',
+                                resize: 'vertical'
+                            }}
+                        />
+                    ) : (
+                        <input
+                            type={type}
+                            name={name}
+                            value={value}
+                            onChange={handleInputChange}
+                            placeholder={placeholder}
+                            style={{
+                                width: '100%',
+                                padding: '8px',
+                                border: '1px solid #bdc3c7',
+                                borderRadius: '4px',
+                                fontFamily: 'Arial, sans-serif',
+                                fontSize: '14px',
+                                boxSizing: 'border-box'
+                            }}
+                        />
+                    )}
+                </div>
+            );
+
+            const CheckboxField = ({ label, name, checked }) => (
+                <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center' }}>
+                    <input
+                        type="checkbox"
+                        name={name}
+                        checked={checked}
+                        onChange={handleInputChange}
+                        style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <label style={{ fontWeight: '500', fontSize: '14px', color: '#2c3e50', cursor: 'pointer' }}>
+                        {label}
+                    </label>
+                </div>
+            );
+
+            const renderContent = () => {
+                switch(activeTab) {
+                    case 0:
+                        return (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <InputField label="📅 Date de l'examen" name="dateExamen" type="date" value={formData.dateExamen} />
+                                <InputField label="Nom du patient" name="nomPatient" value={formData.nomPatient} placeholder="Dupont" />
+                                <InputField label="Prénom du patient" name="prenomPatient" value={formData.prenomPatient} placeholder="Jean" />
+                                <InputField label="📅 Date de naissance" name="dateNaissance" type="date" value={formData.dateNaissance} />
+                                <div>
+                                    <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px', fontSize: '14px', color: '#2c3e50' }}>
+                                        Origine de l'EDV
+                                    </label>
+                                    <select
+                                        name="originEDV"
+                                        value={formData.originEDV}
+                                        onChange={handleInputChange}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px',
+                                            border: '1px solid #bdc3c7',
+                                            borderRadius: '4px',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        <option>EDV client</option>
+                                        <option>EDV Priscilla</option>
+                                        <option>JDP</option>
+                                    </select>
+                                </div>
+                                <InputField label="Initiales opticien" name="initialesOpticien" value={formData.initialesOpticien} placeholder="AB" />
+                            </div>
+                        );
+
+                    case 1:
+                        return (
+                            <div>
+                                <InputField label="🎯 But de la visite" name="butVisite" type="textarea" value={formData.butVisite} placeholder="Ex: Première consultation, renouvellement correction..." />
+                                <InputField label="😕 Plaintes visuelles" name="plaintesVisuelles" type="textarea" value={formData.plaintesVisuelles} placeholder="Ex: Fatigue visuelle, vision floue, etc..." />
+                                
+                                <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#ecf0f1', borderRadius: '4px' }}>
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>Santé oculaire</h4>
+                                    <InputField label="Pathologie" name="pathologie" value={formData.pathologie} placeholder="Ex: Cataracte, DMLA..." />
+                                    <InputField label="Chirurgie" name="chirurgie" value={formData.chirurgie} placeholder="Type de chirurgie..." />
+                                    <InputField label="Choc/Trauma" name="choc" value={formData.choc} placeholder="Description..." />
+                                    <InputField label="Orthoptie" name="orthoptie" value={formData.orthoptie} placeholder="Détails..." />
+                                    <InputField label="Lentilles" name="lentilles" value={formData.lentilles} placeholder="Type porté..." />
+                                    <InputField label="Traitements oculaires" name="traitementsOcul" value={formData.traitementsOcul} placeholder="Ex: Gouttes, etc..." />
+                                </div>
+
+                                <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#ecf0f1', borderRadius: '4px' }}>
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>Santé générale</h4>
+                                    <InputField label="Détails santé générale" name="sante" type="textarea" value={formData.sante} placeholder="Antécédents, allergies..." />
+                                    <CheckboxField label="Diabète" name="diabete" checked={formData.diabete} />
+                                    <CheckboxField label="HTA (Hypertension)" name="hta" checked={formData.hta} />
+                                    <CheckboxField label="SEP (Sclérose en Plaques)" name="sep" checked={formData.sep} />
+                                    <InputField label="Autres pathologies" name="autres" value={formData.autres} placeholder="..." />
+                                </div>
+                            </div>
+                        );
+
+                    case 2:
+                        return (
+                            <div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                                    <div style={{ padding: '12px', backgroundColor: '#e8f4f8', borderRadius: '4px' }}>
+                                        <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>OD (Oeil Droit)</h4>
+                                        <InputField label="VL (Vision Loin)" name="avBruteVLOD" value={formData.avBruteVLOD} placeholder="Ex: 10/10" />
+                                        <InputField label="VP (Vision Près)" name="avBruteVPOD" value={formData.avBruteVPOD} placeholder="Ex: 10/10" />
+                                    </div>
+                                    <div style={{ padding: '12px', backgroundColor: '#e8f4f8', borderRadius: '4px' }}>
+                                        <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>OG (Oeil Gauche)</h4>
+                                        <InputField label="VL (Vision Loin)" name="avBruteVLOG" value={formData.avBruteVLOG} placeholder="Ex: 10/10" />
+                                        <InputField label="VP (Vision Près)" name="avBruteVPOG" value={formData.avBruteVPOG} placeholder="Ex: 10/10" />
+                                    </div>
+                                </div>
+                                <div style={{ padding: '12px', backgroundColor: '#f0e8f4', borderRadius: '4px' }}>
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>BINO (Binoculaire)</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <InputField label="VL (Vision Loin)" name="avBruteVLBINO" value={formData.avBruteVLBINO} placeholder="Ex: 10/10" />
+                                        <InputField label="VP (Vision Près)" name="avBruteVPBINO" value={formData.avBruteVPBINO} placeholder="Ex: 10/10" />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+
+                    case 3:
+                        return (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <InputField label="📅 Date de la dernière prescription" name="dateAnciennePresc" type="date" value={formData.dateAnciennePresc} />
+                                <InputField label="👨‍⚕️ Ophtalmologiste" name="ophtalmologiste" value={formData.ophtalmologiste} placeholder="Nom du praticien" />
+                            </div>
+                        );
+
+                    case 4:
+                        return (
+                            <div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                                    <div style={{ padding: '12px', backgroundColor: '#e8f4f8', borderRadius: '4px' }}>
+                                        <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>OD (Oeil Droit)</h4>
+                                        <InputField label="Correction" name="correctionOD" value={formData.correctionOD} placeholder="Ex: +1.00 (-0.50 x 180)" />
+                                        <InputField label="AV VL" name="avCorrigeeVLOD" value={formData.avCorrigeeVLOD} placeholder="Ex: 10/10" />
+                                        <InputField label="AV VP" name="avCorrigeeVPOD" value={formData.avCorrigeeVPOD} placeholder="Ex: 10/10" />
+                                    </div>
+                                    <div style={{ padding: '12px', backgroundColor: '#e8f4f8', borderRadius: '4px' }}>
+                                        <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>OG (Oeil Gauche)</h4>
+                                        <InputField label="Correction" name="correctionOG" value={formData.correctionOG} placeholder="Ex: +1.00 (-0.50 x 180)" />
+                                        <InputField label="AV VL" name="avCorrigeeVLOG" value={formData.avCorrigeeVLOG} placeholder="Ex: 10/10" />
+                                        <InputField label="AV VP" name="avCorrigeeVPOG" value={formData.avCorrigeeVPOG} placeholder="Ex: 10/10" />
+                                    </div>
+                                </div>
+                                <div style={{ padding: '12px', backgroundColor: '#f0e8f4', borderRadius: '4px' }}>
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>BINO (Binoculaire)</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <InputField label="AV VL" name="avCorrigeeVLBINO" value={formData.avCorrigeeVLBINO} placeholder="Ex: 10/10" />
+                                        <InputField label="AV VP" name="avCorrigeeVPBINO" value={formData.avCorrigeeVPBINO} placeholder="Ex: 10/10" />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+
+                    case 5:
+                        return (
+                            <div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                                    <div style={{ padding: '12px', backgroundColor: '#e8f4f8', borderRadius: '4px' }}>
+                                        <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>OD (Oeil Droit)</h4>
+                                        <InputField label="Réfraction" name="refractionOD" value={formData.refractionOD} placeholder="Ex: +1.00 (-0.50 x 180)" />
+                                        <InputField label="AV VL" name="avFinaleVLOD" value={formData.avFinaleVLOD} placeholder="Ex: 10/10" />
+                                        <InputField label="AV VP" name="avFinaleVPOD" value={formData.avFinaleVPOD} placeholder="Ex: 10/10" />
+                                    </div>
+                                    <div style={{ padding: '12px', backgroundColor: '#e8f4f8', borderRadius: '4px' }}>
+                                        <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>OG (Oeil Gauche)</h4>
+                                        <InputField label="Réfraction" name="refractionOG" value={formData.refractionOG} placeholder="Ex: +1.00 (-0.50 x 180)" />
+                                        <InputField label="AV VL" name="avFinaleVLOG" value={formData.avFinaleVLOG} placeholder="Ex: 10/10" />
+                                        <InputField label="AV VP" name="avFinaleVPOG" value={formData.avFinaleVPOG} placeholder="Ex: 10/10" />
+                                    </div>
+                                </div>
+                                <div style={{ padding: '12px', backgroundColor: '#f0e8f4', borderRadius: '4px' }}>
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>BINO (Binoculaire)</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <InputField label="AV VL" name="avFinaleVLBINO" value={formData.avFinaleVLBINO} placeholder="Ex: 10/10" />
+                                        <InputField label="AV VP" name="avFinaleVPBINO" value={formData.avFinaleVPBINO} placeholder="Ex: 10/10" />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+
+                    case 6:
+                        return (
+                            <div>
+                                <InputField label="📝 Observations" name="observations" type="textarea" value={formData.observations} placeholder="Remarques, anomalies détectées..." />
+                                <InputField label="💡 Conseils verres" name="conseils" type="textarea" value={formData.conseils} placeholder="Recommandations pour les verres (monofocal, progressif, etc...)" />
+                                <InputField label="🔄 Modalité de port" name="modalitePort" type="textarea" value={formData.modalitePort} placeholder="Conditions de port recommandées..." />
+                                <InputField label="📊 Issu de l'EDV" name="issuEDV" type="textarea" value={formData.issuEDV} placeholder="Résultat de l'examen de vue..." />
+                                
+                                <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#ecf0f1', borderRadius: '4px' }}>
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50' }}>Informations du cabinet</h4>
+                                    <InputField label="Nom du prescripteur" name="nomPrescripteur" value={formData.nomPrescripteur} placeholder="Ex: Dr. Martin Durand" />
+                                    <InputField label="Nom de la structure" name="nomStructure" value={formData.nomStructure} placeholder="Ex: Opticien Plus - Paris" />
+                                </div>
+                            </div>
+                        );
+
+                    default:
+                        return null;
+                }
+            };
+
+            return (
+                <div style={{
+                    minHeight: '100vh',
+                    backgroundColor: '#f5f7fa',
+                    padding: '20px',
+                    fontFamily: 'Arial, sans-serif'
+                }}>
+                    <div style={{
+                        maxWidth: '1000px',
+                        margin: '0 auto',
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        overflow: 'hidden'
+                    }}>
+                        {/* En-tête */}
+                        <div style={{
+                            background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                            color: 'white',
+                            padding: '30px',
+                            textAlign: 'center'
+                        }}>
+                            <h1 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: 'bold' }}>👁️ Examen Optométrique</h1>
+                            <p style={{ margin: '0', fontSize: '14px', opacity: 0.9 }}>Application de saisie d'examen optométrique</p>
+                        </div>
+
+                        {/* Onglets */}
+                        <div style={{
+                            display: 'flex',
+                            overflowX: 'auto',
+                            borderBottom: '2px solid #ecf0f1',
+                            backgroundColor: '#f9fafb'
+                        }}>
+                            {tabs.map((tab, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setActiveTab(idx)}
+                                    style={{
+                                        flex: '1',
+                                        padding: '12px 16px',
+                                        border: 'none',
+                                        backgroundColor: activeTab === idx ? '#0066cc' : 'transparent',
+                                        color: activeTab === idx ? 'white' : '#2c3e50',
+                                        fontWeight: '600',
+                                        fontSize: '13px',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                        transition: 'all 0.2s',
+                                        minWidth: '150px'
+                                    }}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Contenu */}
+                        <div style={{ padding: '30px' }}>
+                            {renderContent()}
+                        </div>
+
+                        {/* Boutons d'action */}
+                        <div style={{
+                            padding: '20px 30px',
+                            backgroundColor: '#f9fafb',
+                            borderTop: '1px solid #ecf0f1',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                            gap: '12px'
+                        }}>
+                            <button
+                                onClick={newExam}
+                                style={{
+                                    padding: '12px 16px',
+                                    backgroundColor: '#34495e',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    fontSize: '14px'
+                                }}
+                            >
+                                ➕ Nouvel examen
+                            </button>
+                            <button
+                                onClick={saveExam}
+                                style={{
+                                    padding: '12px 16px',
+                                    backgroundColor: '#27ae60',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    fontSize: '14px'
+                                }}
+                            >
+                                💾 Sauvegarder
+                            </button>
+                            <button
+                                onClick={exportToExcel}
+                                style={{
+                                    padding: '12px 16px',
+                                    backgroundColor: '#16a085',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    fontSize: '14px'
+                                }}
+                            >
+                                📊 Export Excel
+                            </button>
+                            <button
+                                onClick={() => setShowReport(!showReport)}
+                                style={{
+                                    padding: '12px 16px',
+                                    backgroundColor: '#e67e22',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    fontSize: '14px'
+                                }}
+                            >
+                                📄 Générer rapport
+                            </button>
+                        </div>
+
+                        {/* Rapport */}
+                        {showReport && (
+                            <div style={{ padding: '30px', borderTop: '1px solid #ecf0f1', backgroundColor: '#f9fafb' }}>
+                                <h3 style={{ marginTop: '0', marginBottom: '16px', color: '#2c3e50' }}>Rapport d'examen</h3>
+                                <pre style={{
+                                    backgroundColor: '#ecf0f1',
+                                    padding: '16px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    overflowX: 'auto',
+                                    fontFamily: 'monospace',
+                                    whiteSpace: 'pre-wrap',
+                                    wordWrap: 'break-word'
+                                }}>
+                                    {generateReport()}
+                                </pre>
+                                <button
+                                    onClick={downloadReport}
+                                    style={{
+                                        padding: '12px 16px',
+                                        backgroundColor: '#e67e22',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        marginTop: '16px'
+                                    }}
+                                >
+                                    ⬇️ Télécharger rapport
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Liste des examens sauvegardés */}
+                        {savedExams.length > 0 && (
+                            <div style={{ padding: '30px', borderTop: '1px solid #ecf0f1', backgroundColor: '#f9fafb' }}>
+                                <h3 style={{ marginTop: '0', marginBottom: '16px', color: '#2c3e50' }}>Examens sauvegardés ({savedExams.length})</h3>
+                                <div style={{ display: 'grid', gap: '12px' }}>
+                                    {savedExams.map(exam => (
+                                        <div key={exam.id} style={{
+                                            padding: '12px',
+                                            backgroundColor: 'white',
+                                            border: '1px solid #bdc3c7',
+                                            borderRadius: '4px',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}>
+                                            <span style={{ fontSize: '14px' }}>
+                                                <strong>{exam.prenomPatient} {exam.nomPatient}</strong> - {exam.dateExamen}
+                                            </span>
+                                            <button
+                                                onClick={() => deleteExam(exam.id)}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    backgroundColor: '#e74c3c',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '3px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '12px'
+                                                }}
+                                            >
+                                                Supprimer
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<OptometrieApp />);
+    </script>
+</body>
+</html>
